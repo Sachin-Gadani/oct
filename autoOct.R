@@ -1,11 +1,12 @@
-
 library("optparse")
 library("readr")
 library("officer")
 suppressMessages(library("tidyverse"))
 suppressMessages(library('flextable'))
 
-# Get args from autoOct.sh
+# ----
+# 1. Get args from autoOct.sh
+
 option_list = list(
   make_option(c("-a", "--rod"), action="store", default=NA, type='character',
               help="RNFL OD val"),
@@ -37,12 +38,36 @@ opt = parse_args(OptionParser(option_list=option_list))
 
 cat("Are there any prior scans available for comparison? [T/F] ")
 priorScans <- as.logical(readLines(file('stdin'), n=1))
+
 if(priorScans) { 
   cat("What was the date of the last scan? [xx/xx/xx] ")
-  dateOfLastScan <- readLines(file('stdin'), n=1)}
+  dateOfLastScan <- readLines(file('stdin'), n=1)
+  
+  #get prior data
+  cat("Copy prior scan data values, space seperated, no tabs: [date rnfl-od rnfl-os gcipl-od gcipl-os] \n")
+  cat("ex: 9/1/2021 92 um 91 um 81 um 79 um 2/17/2021 94 um... \n")
+  priorScanData <- readLines(file('stdin'), n=1)
+  priorScanData <- as.list(scan(text = priorScanData, what = "   ")) # convert to list
+  priorScanData <- priorScanData[priorScanData != "um"]
+  
+  
+  if(length(priorScanData) %% 5 != 0){ #check list div by 5
+    cat("input error, number of  elements not factor of 5. Try again!")
+    # try again
+    cat("Copy prior scan data values, space seperated, no tabs: [date rnfl-od rnfl-os gcipl-od gcipl-os]")
+    cat("ex: 9/1/2021 92 um 91 um 81 um 79 um 2/17/2021 94 um...")
+    priorScanData <- readLines(file('stdin'), n=1)
+    priorScanData <- as.list(scan(text = priorScanData, what = "   ")) 
+    
+    if(length(priorScanData) %% 5 != 0){
+      cat("still not working")
+      
+      quit()
+    }
+  }
+}
 
-
-# Sample Data
+# Sample Data (for debugging)
 # opt <- list(rod = "84",
 #             rodc = "green",
 #             ros = "105",
@@ -58,8 +83,9 @@ if(priorScans) {
 # 
 # opt$textFile <- read_file("/Users/belladonna/work/oct/test.txt")
 
-# Get data from text file
 # ----
+# 2. Get data from text file
+
 ## convert the file into seperate strings
 y <- strsplit(opt$textFile, "[[:space:]]+")
 y <- unlist(y)
@@ -81,13 +107,15 @@ qualOsGcIpl <- as.numeric(strsplit(qualOsGcIpl, "/")[[1]][1])
 qualOdRnfl <- as.numeric(strsplit(qualOdRnfl, "/")[[1]][1])
 qualOsRnfl <- as.numeric(strsplit(qualOsRnfl, "/")[[1]][1])
 
-# Make introduction text (var introText)
+# ----
+# 3. Introduction text (var introText)
 introText <- paste("Clinical OCT Report", 
                    "\n \n \n", 
                    "OCT findings: ",
                    "\n ")
 
-# Make the rnfl / gcipl table (var octDf)
+# ----
+# 4. Make the rnfl / gcipl table (var octDf)
 # define rodperc, rosperc, etc.
 if (opt$rodc == 'green'){rodPerc <- '5th-95th percentile'}else 
   if (opt$rodc == 'red') {rodPerc <- "< 1st percentile"}else 
@@ -118,14 +146,28 @@ octDf <- data.frame(Date = c(dateOfExam, ""),
                     GCIPL_OD = c(god, godPerc),
                     GCIPL_OS = c(gos, gosPerc))
 
-# Inicidental pathology statement
+# add prior scan data to the table
+if(priorScans){
+  for(i in 1:(length(priorScanData)/5)){
+    x <- c(priorScanData[(i*5)-4],
+           paste(priorScanData[(i*5)-3],"um"),
+           paste(priorScanData[(i*5)-2],"um"),
+           paste(priorScanData[(i*5)-1],"um"),
+           paste(priorScanData[i*5],"um"))
+    
+    octDf <- rbind(octDf, x)
+  }
+}
+
 # ----
+# 5. Incidental pathology statement
+
 if (opt$ifind != " "){
   ifindings <- paste0("Incidental retinal pathology was found on this exam. Specifically, ", opt$ifind, ".")
   
   print(ifindings)
   
-  cat("Need formal opthalmological evaluation for this? [T or F]? ")
+  cat("Need formal opthalmological evaluation for this? [T / F]? ")
   doReferral <- as.logical(readLines(file('stdin'), n=1))
   
   if (doReferral == TRUE) {
@@ -133,13 +175,12 @@ if (opt$ifind != " "){
   }
 }
 
-
-# Make detailed interpretation section
 # ----
+# 6. Make detailed interpretation section
 
 detailedInt <- paste("DETAILED INTERPRETATION:", "\n")
 
-cat("I personally reviewed the OCT scan that is stored on the FORUM server [T/F]? ")
+cat("I personally reviewed the OCT scan that is stored on the FORUM server [T / F]? ")
 x <- as.logical(readLines(file('stdin'), n=1))
 
 if (x){detailedInt <- paste(detailedInt, "I personally reviewed the OCT scan that is stored on the FORUM server.", sep='\n')}
@@ -148,7 +189,7 @@ if (x){detailedInt <- paste(detailedInt, "I personally reviewed the OCT scan tha
 ## If everything is >8/10, prompt user to make sure quality was good
 if (as.numeric(qualOdRnfl) > 7 & as.numeric(qualOsRnfl) > 7 & as.numeric(qualOsGcIpl) > 7 & as.numeric(qualOdGcIpl) > 7){
   
-  cat("All quality metrics were at least 8/10. Do you agree that this study has no quality issues? [T/F] ")
+  cat("All quality metrics were at least 8/10. Do you agree that this study has no quality issues? [T / F] ")
   x <- as.logical(readLines(file('stdin'), n=1))
   
   if (x == FALSE) {
@@ -205,7 +246,7 @@ if (rodRosDif < 6) {
 }
 
 # regional thinning
-cat("Is there significant regional thinning in the RNFL in either eye? [T/F] ")
+cat("Is there significant regional thinning in the RNFL in either eye? [T / F] ")
 x <- as.logical(readLines(file('stdin'), n=1))
 
 if (x) {
@@ -224,7 +265,8 @@ if (x) {
 
 # Stable from prior sentence
 if (priorScans) {
-  cat("Was RNFL thickness stable from prior scans? \n Note: 0.15-.16 uM/year acceptable for age-related changes [T/F] ")
+  print(octDf)
+  cat("Was RNFL thickness stable from prior scans? \n Note: 0.15-.16 uM/year acceptable for age-related changes [T / F] ")
    rnflStable <- as.logical(readLines(file('stdin'), n=1))
    
    if (rnflStable){
@@ -291,6 +333,7 @@ if (x) {
 
 # Stable from prior sentence
 if (priorScans) {
+  print(octDf)
   cat("Was GCIPL thickness stable from prior scans? \n Note: 0.15-.16 uM/year acceptable for age-related changes [T/F] ")
   gcIplStable <- as.logical(readLines(file('stdin'), n=1))
   
@@ -314,7 +357,8 @@ if (priorScans) {
 
 detailedInt <- paste("\n", detailedInt, "\n", qualityIssue, "\n", rnflStatement, "\n", "\n", gcIplStatement)
 
-# Summary statement and signature (var sumStatement)
+# ----
+# 7. Summary statement and signature (var sumStatement)
 cat("Is this a normal OCT? [T/F] ")
 normalOrAbnormal <- as.logical(readLines(file('stdin'), n=1))
 
@@ -327,12 +371,15 @@ if (normalOrAbnormal){
   sumStatement <- "The OCT findings are normal."
   if(priorScans){
     if (gcIplStable & rnflStable) {
-      sumStatement <- paste(sumStatement, "iRNFL and GCIPL values are stable from prior.")
+      sumStatement <- paste(sumStatement, "RNFL and GCIPL values are stable from prior.")
     }
   }
 }else{
   if (isOpticNeuropathy) {
     sumStatement <- paste("These findings could be supportive of optic neuropathy in the", thinnerEyeRnfl, "eye.")
+  }else {
+    cat("explain the summary statement of this OCT:")
+    sumStatement <- readLines(file('stdin'), n=1)
   }
 }
 
@@ -344,8 +391,8 @@ sumStatement <- paste("\n",
                       "\n",
                       "Neuroimmunology Fellow")
 
-
-# Make a word doc
+# ----
+# 8. Build / save the word doc
 
 ## create empty Word file
 wordDoc <- read_docx()
@@ -368,6 +415,10 @@ set_flextable_defaults(font.size = 10, font.family = "Arial",
                        theme_fun = 'theme_box')
 wordDoc <- wordDoc %>% body_add_flextable(flextable(octDf)) 
 wordDoc <- wordDoc %>% body_add_par(" ") 
+
+# Incidental
+ifindings <- strsplit(detailedInt, '\n')
+for(i in 1:length(ifindings[[1]])){wordDoc %>% body_add_par(ifindings[[1]][i])}
 
 # Detailed 
 detailedInt <- strsplit(detailedInt, '\n')
