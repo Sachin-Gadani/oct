@@ -266,7 +266,7 @@ if (x) {
 
 # Stable from prior sentence
 if (priorScans) {
-  print(octDf)
+  print(octDf[1:3])
   cat("Was RNFL thickness stable from prior scans? \n Note: 0.15-.16 uM/year acceptable for age-related changes [T / F] ")
    rnflStable <- as.logical(readLines(file('stdin'), n=1))
    
@@ -334,7 +334,7 @@ if (x) {
 
 # Stable from prior sentence
 if (priorScans) {
-  print(octDf)
+  print(octDf[c(1,4:5)])
   cat("Was GCIPL thickness stable from prior scans? \n Note: 0.15-.16 uM/year acceptable for age-related changes [T/F] ")
   gcIplStable <- as.logical(readLines(file('stdin'), n=1))
   
