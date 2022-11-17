@@ -42,16 +42,12 @@ cat("Are there any prior scans available for comparison? [T/F] ")
 priorScans <- as.logical(readLines(file('stdin'), n=1))
 
 if(priorScans) { 
-  cat("What was the date of the last scan? [xx/xx/xx] ")
-  dateOfLastScan <- readLines(file('stdin'), n=1)
-  
   #get prior data
   cat("Copy prior scan data values, space seperated, no tabs: [date rnfl-od rnfl-os gcipl-od gcipl-os] \n")
   cat("ex: 9/1/2021 92 um 91 um 81 um 79 um 2/17/2021 94 um... \n")
   priorScanData <- readLines(file('stdin'), n=1)
   priorScanData <- as.list(scan(text = priorScanData, what = "   ")) # convert to list
   priorScanData <- priorScanData[priorScanData != "um"]
-  
   
   if(length(priorScanData) %% 5 != 0){ #check list div by 5
     cat("input error, number of  elements not factor of 5. Try again!")
@@ -67,6 +63,9 @@ if(priorScans) {
       quit()
     }
   }
+  
+  dateOfLastScan <- priorScanData[1]
+  
 }
 
 # Sample Data (for debugging)
