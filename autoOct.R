@@ -195,7 +195,8 @@ if (as.numeric(qualOdRnfl) > 7 & as.numeric(qualOsRnfl) > 7 & as.numeric(qualOsG
   
   if (x == FALSE) {
     
-    cat("Describe the quality issue (ex. \n
+    cat("A quality metric was <8/10 \n
+        Describe the quality issue, ex. \n
              1)	There was marked motion artifact in *** eye, limiting \n
              2)	Incidental pathology of *** in the *** eye limited \n
              3)	Poor scan quality in the *** eye resulted in poor segmentation resulting in *** ")
@@ -418,7 +419,7 @@ wordDoc <- wordDoc %>% body_add_flextable(flextable(octDf))
 wordDoc <- wordDoc %>% body_add_par(" ") 
 
 # Incidental
-ifindings <- strsplit(detailedInt, '\n')
+ifindings <- strsplit(ifindings, '\n')
 for(i in 1:length(ifindings[[1]])){wordDoc %>% body_add_par(ifindings[[1]][i])}
 
 # Detailed 
